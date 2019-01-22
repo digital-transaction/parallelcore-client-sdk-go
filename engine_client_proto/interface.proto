@@ -1,0 +1,31 @@
+//
+// Copyright 2018 Digital Transaction Limited. All Rights Reserved.
+//
+// Authors: Yang SONG, Eric Ma
+//
+
+syntax = "proto3";
+
+package engine_client_proto;
+
+service RequestHandler {
+  rpc Invoke(Request) returns (Response) {}
+  rpc SysMan(Request) returns (Response) {}
+  rpc Auth(AuthRequest) returns (Response) {}
+  rpc Ping(Request) returns (Response) {}
+}
+
+message AuthRequest {
+  bytes clientId = 1;
+  bytes credential = 2;
+}
+
+message Request {
+  bytes payload = 1;
+}
+
+message Response {
+  bytes payload = 1;
+  bytes error = 2;
+}
+
