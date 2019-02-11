@@ -10,7 +10,9 @@ package engine_client_proto;
 
 service RequestHandler {
   rpc Invoke(Request) returns (Response) {}
+  rpc UserMan(Request) returns (Response) {}
   rpc SysMan(Request) returns (Response) {}
+  rpc Renew(Request) returns (Response) {}
   rpc Auth(AuthRequest) returns (Response) {}
   rpc Ping(Request) returns (Response) {}
 }

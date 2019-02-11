@@ -14,6 +14,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"math/rand"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -34,11 +35,14 @@ func (t customCredential) RequireTransportSecurity() bool {
 }
 
 type Client struct {
-	conn       *grpc.ClientConn
-	ctx        context.Context
-	cancel     context.CancelFunc
-	grpcClient pb.RequestHandlerClient
-	token      string
+	conn            *grpc.ClientConn
+	ctx             context.Context
+	cancel          context.CancelFunc
+	grpcClient      pb.RequestHandlerClient
+	endpointSpecs   string
+	certPath        string
+	token           string
+	expireTimestamp int64
 }
 
 func openOne(endpoint string, certPath string, token string) (*Client, error) {
@@ -84,7 +88,7 @@ func openOne(endpoint string, certPath string, token string) (*Client, error) {
 		return nil, fmt.Errorf("Ping wrong response value. %v", response.Payload)
 	}
 
-	return &Client{conn, ctx, cancel, grpcClient, token}, nil
+	return &Client{conn, ctx, cancel, grpcClient, "", certPath, token, 0}, nil
 }
 
 // certPath: if empty, use the system certificate, otherwise, use the certificate provided in the file in certPath
@@ -115,18 +119,31 @@ func OpenAny(endpointSpecs string, clientId string, credential string, certPath 
 			continue
 		}
 
-		// Successfully setup a connection, fetch the token
-		tokenBytes, err := client.auth([]byte(clientId), []byte(credential))
+		// Successfully setup a connection, fetch the token and expireTimestamp
+		returnBytes, err := client.auth([]byte(clientId), []byte(credential))
 		client.Close()
 		if err != nil {
 			return nil, err
 		}
 
-		//fmt.Println("token: ", string(tokenBytes), "\n")
-		client, err = openOne(endpoint, certPath, string(tokenBytes))
+		// Parse returnBytes
+		tmpArray := strings.Split(string(returnBytes), " ")
+		if len(tmpArray) != 2 {
+			return nil, fmt.Errorf("SYSTEM: Wrong format message from auth().")
+		}
+		token := tmpArray[0]
+		expireTimestamp, err := strconv.ParseInt(tmpArray[1], 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("SYSTEM: Wrong format of expireTimestamp. %v", err)
+		}
+
+		client, err = openOne(endpoint, certPath, token)
 		if err != nil {
 			return nil, fmt.Errorf("CLIENT: Failed to open a connection. %v", err)
 		}
+		client.expireTimestamp = expireTimestamp
+		client.endpointSpecs = endpointSpecs
+
 		return client, nil
 	}
 
@@ -141,7 +158,10 @@ func OpenMany(endpointSpecs string, clientId string, credential string, certPath
 	clients := make([]*Client, 0)
 	// these clients can use the same token
 	token := ""
+	var expireTimestamp int64
 	for _, endpoint := range endpoints {
+		// Create a connection first.
+		// If the connection is not connect with token, then will run next block to fetch JWT and expireTimestamp
 		client, err := openOne(endpoint, certPath, token)
 		if err != nil {
 			lastError = fmt.Errorf("%v%v\n", lastError, err)
@@ -149,26 +169,40 @@ func OpenMany(endpointSpecs string, clientId string, credential string, certPath
 		}
 		if token == "" {
 			// Successfully setup the first connection, fetch the token
-			tokenBytes, err := client.auth([]byte(clientId), []byte(credential))
+			returnBytes, err := client.auth([]byte(clientId), []byte(credential))
 			client.Close()
 			if err != nil {
 				return nil, err
 			}
 
-			// Saved the token, later, all connections will setup with that token
-			token = string(tokenBytes)
-			//fmt.Println("token: ", token, "\n")
+			// Parse returnBytes
+			tmpArray := strings.Split(string(returnBytes), " ")
+			if len(tmpArray) != 2 {
+				return nil, fmt.Errorf("SYSTEM: Wrong format message from auth().")
+			}
+			// Saved the token and expireTimestamp. Later, all connections will setup with that token
+			token = tmpArray[0]
+			expireTimestamp, err = strconv.ParseInt(tmpArray[1], 10, 64)
+			if err != nil {
+				return nil, fmt.Errorf("SYSTEM: Wrong format of expireTimestamp. %v", err)
+			}
+
 			client, err = openOne(endpoint, certPath, token)
 			if err != nil {
 				return nil, fmt.Errorf("CLIENT: Failed to open a connection. %v", err)
 			}
 		}
+		client.expireTimestamp = expireTimestamp
+		client.endpointSpecs = endpointSpecs
 		clients = append(clients, client)
 	}
 	if len(clients) == 0 {
 		// All attemps to connect are failed.
 		return nil, fmt.Errorf("CLIENT: Failed to open all clients. Last error: %v", lastError)
 	} else {
+		if lastError.Error() == "" {
+			return clients, nil
+		}
 		// All good or some attemps to connect failed. Opened all clients or opened some clients.
 		return clients, lastError
 	}
@@ -187,6 +221,10 @@ func (client *Client) Close() {
 
 func (client *Client) GetToken() string {
 	return client.token
+}
+
+func (client *Client) GetTokenExpTime() int64 {
+	return client.expireTimestamp
 }
 
 func (client *Client) invoke(in []byte) ([]byte, error) {
@@ -226,4 +264,72 @@ func (client *Client) SysMan(in []byte) ([]byte, error) {
 		return nil, fmt.Errorf("%v", string(response.Error))
 	}
 	return response.Payload, nil
+}
+
+func (client *Client) UserMan(in []byte) ([]byte, error) {
+	response, err := client.grpcClient.UserMan(client.ctx, &pb.Request{Payload: in})
+	if err != nil {
+		return nil, fmt.Errorf("CLIENT: %v", err)
+	}
+	if len(response.Error) != 0 {
+		return nil, fmt.Errorf("%v", string(response.Error))
+	}
+	return response.Payload, nil
+}
+
+func (client *Client) renewToken() (string, int64, error) {
+	// Fetch new JWT and expireTimestamp
+	response, err := client.grpcClient.Renew(client.ctx, &pb.Request{Payload: []byte("")})
+	if err != nil {
+		return "", 0, fmt.Errorf("CLIENT: %v", err)
+	}
+	if len(response.Error) != 0 {
+		return "", 0, fmt.Errorf("%v", string(response.Error))
+	}
+
+	// Parse returnBytes
+	tmpArray := strings.Split(string(response.Payload), " ")
+	if len(tmpArray) != 2 {
+		return "", 0, fmt.Errorf("SYSTEM: Wrong format message from RenewToken().")
+	}
+	token := tmpArray[0]
+	expireTimestamp, err := strconv.ParseInt(tmpArray[1], 10, 64)
+	if err != nil {
+		return "", 0, fmt.Errorf("SYSTEM: Wrong format of expireTimestamp. %v", err)
+	}
+
+	return token, expireTimestamp, nil
+}
+
+func (client *Client) Renew() error {
+
+	token, expireTimestamp, err := client.renewToken()
+	if err != nil {
+		return err
+	}
+
+	client.Close()
+
+	randSrc := rand.NewSource(time.Now().UnixNano())
+	randGen := rand.New(randSrc)
+
+	endpoints := strings.Split(client.endpointSpecs, " ")
+	var lastError error
+	for len(endpoints) != 0 {
+		randPick := randGen.Intn(len(endpoints))
+		endpoint := endpoints[randPick]
+
+		newClient, err := openOne(endpoint, client.certPath, token)
+		if err != nil {
+			lastError = err
+			endpoints = append(endpoints[:randPick], endpoints[randPick+1:]...)
+			continue
+		}
+		newClient.expireTimestamp = expireTimestamp
+		newClient.endpointSpecs = client.endpointSpecs
+
+		*client = *newClient
+		return nil
+	}
+	return fmt.Errorf("CLIENT: Failed to renew a connection. %v", lastError)
 }
