@@ -10,6 +10,7 @@ package engine_client_proto;
 
 service RequestHandler {
   rpc Invoke(Request) returns (Response) {}
+  rpc IdentifiedInvoke(Request) returns (IdentifiedResponse) {}
   rpc UserMan(Request) returns (Response) {}
   rpc SysMan(Request) returns (Response) {}
   rpc Renew(Request) returns (Response) {}
@@ -29,5 +30,11 @@ message Request {
 message Response {
   bytes payload = 1;
   bytes error = 2;
+}
+
+message IdentifiedResponse {
+  bytes payload = 1;
+  bytes committedId = 2;
+  bytes error = 3;
 }
 

@@ -48,10 +48,6 @@ type Client struct {
 func openOne(endpoint string, certPath string, token string) (*Client, error) {
 	var grpcOpts []grpc.DialOption
 
-	//if certPath == "" {
-	//	fmt.Println("Using system default root certificates.")
-	//}
-
 	if token == "" {
 
 		//fmt.Println("Setup a connection to fetch token.\n")
@@ -92,7 +88,6 @@ func openOne(endpoint string, certPath string, token string) (*Client, error) {
 }
 
 // certPath: if empty, use the system certificate, otherwise, use the certificate provided in the file in certPath
-// No TLS support: (TODO) use environment variable to control possibly..
 
 func OpenAny(endpointSpecs string, clientId string, credential string, certPath string) (*Client, error) {
 	randSrc := rand.NewSource(time.Now().UnixNano())
@@ -302,6 +297,23 @@ func (client *Client) Invoke(smartcontract_spec string, args []byte) ([]byte, er
 	newBytes := append([]byte(smartcontract_spec), []byte(" ")...)
 	newBytes = append(newBytes, args...)
 	return client.invoke(newBytes)
+}
+
+func (client *Client) identifiedInvoke(in []byte) ([]byte, string, error) {
+	response, err := client.grpcClient.IdentifiedInvoke(client.ctx, &pb.Request{Payload: in})
+	if err != nil {
+		return nil, "", fmt.Errorf("CLIENT: %v", err)
+	}
+	if len(response.Error) != 0 {
+		return nil, "", fmt.Errorf("%v", string(response.Error))
+	}
+	return response.Payload, string(response.CommittedId), nil
+}
+
+func (client *Client) IdentifiedInvoke(smartcontract_spec string, args []byte) ([]byte, string, error) {
+	newBytes := append([]byte(smartcontract_spec), []byte(" ")...)
+	newBytes = append(newBytes, args...)
+	return client.identifiedInvoke(newBytes)
 }
 
 func (client *Client) auth(clientId []byte, credential []byte) ([]byte, error) {
