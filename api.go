@@ -51,12 +51,22 @@ func openOne(endpoint string, certPath string, token string) (*Client, error) {
 	if token == "" {
 
 		//fmt.Println("Setup a connection to fetch token.\n")
-		grpcOpts = append(grpcOpts, grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{})))
+		if certPath == "" {
+			grpcOpts = append(grpcOpts, grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{})))
+		} else {
+			creds, _ := credentials.NewClientTLSFromFile(certPath, "")
+			grpcOpts = append(grpcOpts, grpc.WithTransportCredentials(creds))
+		}
 
 	} else {
 
 		//fmt.Println("Setup a connection with token.\n")
-		grpcOpts = append(grpcOpts, grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{})))
+		if certPath == "" {
+			grpcOpts = append(grpcOpts, grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{})))
+		} else {
+			creds, _ := credentials.NewClientTLSFromFile(certPath, "")
+			grpcOpts = append(grpcOpts, grpc.WithTransportCredentials(creds))
+		}
 		grpcOpts = append(grpcOpts, grpc.WithPerRPCCredentials(customCredential{
 			token: token,
 		}))
