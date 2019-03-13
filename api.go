@@ -54,7 +54,10 @@ func openOne(endpoint string, certPath string, token string) (*Client, error) {
 		if certPath == "" {
 			grpcOpts = append(grpcOpts, grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{})))
 		} else {
-			creds, _ := credentials.NewClientTLSFromFile(certPath, "")
+			creds, err := credentials.NewClientTLSFromFile(certPath, "")
+			if err != nil {
+				return nil, err
+			}
 			grpcOpts = append(grpcOpts, grpc.WithTransportCredentials(creds))
 		}
 
@@ -64,7 +67,10 @@ func openOne(endpoint string, certPath string, token string) (*Client, error) {
 		if certPath == "" {
 			grpcOpts = append(grpcOpts, grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{})))
 		} else {
-			creds, _ := credentials.NewClientTLSFromFile(certPath, "")
+			creds, err := credentials.NewClientTLSFromFile(certPath, "")
+			if err != nil {
+				return nil, err
+			}
 			grpcOpts = append(grpcOpts, grpc.WithTransportCredentials(creds))
 		}
 		grpcOpts = append(grpcOpts, grpc.WithPerRPCCredentials(customCredential{
