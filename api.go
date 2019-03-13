@@ -75,7 +75,6 @@ func openOne(endpoint string, certPath string, token string) (*Client, error) {
 
 	conn, err := grpc.Dial(endpoint, grpcOpts...)
 	if err != nil {
-		conn.Close()
 		return nil, fmt.Errorf("Failed to dail. %v", err)
 	}
 
