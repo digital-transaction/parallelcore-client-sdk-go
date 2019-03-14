@@ -14,6 +14,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"math/rand"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -43,6 +44,78 @@ type Client struct {
 	certPath        string
 	token           string
 	expireTimestamp int64
+}
+
+func OpenAnyWithCert(endpointSpecs string, clientId string, credential string) (*Client, error) {
+	tlsCertPath := os.Getenv("PCORE_CERT_PATH")
+	if tlsCertPath == "" {
+		client, err := OpenAny(endpointSpecs, clientId, credential, "")
+		if err != nil {
+			return nil, err
+		}
+		return client, nil
+	} else {
+		client, err := OpenAny(endpointSpecs, clientId, credential, tlsCertPath)
+		if err != nil {
+			return nil, err
+		}
+		return client, nil
+	}
+	return nil, fmt.Errorf("Error when using OpenAnyWithCert()")
+}
+
+func OpenAnyByTokenWithCert(endpointSpecs string, token string, expireTimestamp int64) (*Client, error) {
+	tlsCertPath := os.Getenv("PCORE_CERT_PATH")
+	if tlsCertPath == "" {
+		client, err := OpenAnyByToken(endpointSpecs, token, expireTimestamp, "")
+		if err != nil {
+			return nil, err
+		}
+		return client, nil
+	} else {
+		client, err := OpenAnyByToken(endpointSpecs, token, expireTimestamp, tlsCertPath)
+		if err != nil {
+			return nil, err
+		}
+		return client, nil
+	}
+	return nil, fmt.Errorf("Error when using OpenAnyByTokenWithCert()")
+}
+
+func OpenManyWithCert(endpointSpecs string, clientId string, credential string) ([]*Client, error) {
+	tlsCertPath := os.Getenv("PCORE_CERT_PATH")
+	if tlsCertPath == "" {
+		clients, err := OpenMany(endpointSpecs, clientId, credential, "")
+		if err != nil {
+			return nil, err
+		}
+		return clients, nil
+	} else {
+		clients, err := OpenMany(endpointSpecs, clientId, credential, tlsCertPath)
+		if err != nil {
+			return nil, err
+		}
+		return clients, nil
+	}
+	return nil, fmt.Errorf("Error when using OpenManyWithCert()")
+}
+
+func OpenManyByTokenWithCert(endpointSpecs string, token string, expireTimestamp int64) ([]*Client, error) {
+	tlsCertPath := os.Getenv("PCORE_CERT_PATH")
+	if tlsCertPath == "" {
+		clients, err := OpenManyByToken(endpointSpecs, token, expireTimestamp, "")
+		if err != nil {
+			return nil, err
+		}
+		return clients, nil
+	} else {
+		clients, err := OpenManyByToken(endpointSpecs, token, expireTimestamp, tlsCertPath)
+		if err != nil {
+			return nil, err
+		}
+		return clients, nil
+	}
+	return nil, fmt.Errorf("Error when using OpenManyByTokenWithCert()")
 }
 
 func openOne(endpoint string, certPath string, token string) (*Client, error) {
