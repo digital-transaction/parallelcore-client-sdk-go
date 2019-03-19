@@ -1,7 +1,7 @@
 //
 // Copyright 2019 Digital Transaction Limited. All Rights Reserved.
 //
-// Authors: Yang SONG, Eric Ma
+// Authors: Yang SONG, Eric Ma, Ray Chan
 //
 
 package parallelcore_client_sdk_go
@@ -49,17 +49,9 @@ type Client struct {
 func OpenAnyWithCert(endpointSpecs string, clientId string, credential string) (*Client, error) {
 	tlsCertPath := os.Getenv("PCORE_CERT_PATH")
 	if tlsCertPath == "" {
-		client, err := OpenAny(endpointSpecs, clientId, credential, "")
-		if err != nil {
-			return nil, err
-		}
-		return client, nil
+		return OpenAny(endpointSpecs, clientId, credential, "")
 	} else {
-		client, err := OpenAny(endpointSpecs, clientId, credential, tlsCertPath)
-		if err != nil {
-			return nil, err
-		}
-		return client, nil
+		return OpenAny(endpointSpecs, clientId, credential, tlsCertPath)
 	}
 	return nil, fmt.Errorf("Error when using OpenAnyWithCert()")
 }
@@ -67,17 +59,9 @@ func OpenAnyWithCert(endpointSpecs string, clientId string, credential string) (
 func OpenAnyByTokenWithCert(endpointSpecs string, token string, expireTimestamp int64) (*Client, error) {
 	tlsCertPath := os.Getenv("PCORE_CERT_PATH")
 	if tlsCertPath == "" {
-		client, err := OpenAnyByToken(endpointSpecs, token, expireTimestamp, "")
-		if err != nil {
-			return nil, err
-		}
-		return client, nil
+		return OpenAnyByToken(endpointSpecs, token, expireTimestamp, "")
 	} else {
-		client, err := OpenAnyByToken(endpointSpecs, token, expireTimestamp, tlsCertPath)
-		if err != nil {
-			return nil, err
-		}
-		return client, nil
+		return OpenAnyByToken(endpointSpecs, token, expireTimestamp, tlsCertPath)
 	}
 	return nil, fmt.Errorf("Error when using OpenAnyByTokenWithCert()")
 }
@@ -85,17 +69,9 @@ func OpenAnyByTokenWithCert(endpointSpecs string, token string, expireTimestamp 
 func OpenManyWithCert(endpointSpecs string, clientId string, credential string) ([]*Client, error) {
 	tlsCertPath := os.Getenv("PCORE_CERT_PATH")
 	if tlsCertPath == "" {
-		clients, err := OpenMany(endpointSpecs, clientId, credential, "")
-		if err != nil {
-			return nil, err
-		}
-		return clients, nil
+		return OpenMany(endpointSpecs, clientId, credential, "")
 	} else {
-		clients, err := OpenMany(endpointSpecs, clientId, credential, tlsCertPath)
-		if err != nil {
-			return nil, err
-		}
-		return clients, nil
+		return OpenMany(endpointSpecs, clientId, credential, tlsCertPath)
 	}
 	return nil, fmt.Errorf("Error when using OpenManyWithCert()")
 }
@@ -103,17 +79,9 @@ func OpenManyWithCert(endpointSpecs string, clientId string, credential string) 
 func OpenManyByTokenWithCert(endpointSpecs string, token string, expireTimestamp int64) ([]*Client, error) {
 	tlsCertPath := os.Getenv("PCORE_CERT_PATH")
 	if tlsCertPath == "" {
-		clients, err := OpenManyByToken(endpointSpecs, token, expireTimestamp, "")
-		if err != nil {
-			return nil, err
-		}
-		return clients, nil
+		return OpenManyByToken(endpointSpecs, token, expireTimestamp, "")
 	} else {
-		clients, err := OpenManyByToken(endpointSpecs, token, expireTimestamp, tlsCertPath)
-		if err != nil {
-			return nil, err
-		}
-		return clients, nil
+		return OpenManyByToken(endpointSpecs, token, expireTimestamp, tlsCertPath)
 	}
 	return nil, fmt.Errorf("Error when using OpenManyByTokenWithCert()")
 }
@@ -424,6 +392,10 @@ func (client *Client) SysMan(in []byte) ([]byte, error) {
 		return nil, fmt.Errorf("%v", string(response.Error))
 	}
 	return response.Payload, nil
+}
+
+func (client *Client) ListInvokableSC() ([]byte, error) {
+	return client.UserMan([]byte("ListInvokableSC"))
 }
 
 func (client *Client) UserMan(in []byte) ([]byte, error) {
