@@ -398,6 +398,22 @@ func (client *Client) ListInvokableSC() ([]byte, error) {
 	return client.UserMan([]byte("ListInvokableSC"))
 }
 
+func (client *Client) GetBlockchainSummaryJson() ([]byte, error) {
+	return client.UserMan([]byte("GetBlockchainSummaryJson"))
+}
+
+func (client *Client) GetBlockDetailsJson(chainId, blockId string) ([]byte, error) {
+	return client.UserMan([]byte("GetBlockDetailsJson " + chainId + " " + blockId))
+}
+
+func (client *Client) CalculateBlockHash(chainId, blockId string) ([]byte, error) {
+	return client.UserMan([]byte("CalculateBlockHash " + chainId + " " + blockId))
+}
+
+func (client *Client) GetSmartContractTransactionJson(transactionId string) ([]byte, error) {
+	return client.UserMan([]byte("GetSmartContractTransactionJson " + transactionId))
+}
+
 func (client *Client) UserMan(in []byte) ([]byte, error) {
 	response, err := client.grpcClient.UserMan(client.ctx, &pb.Request{Payload: in})
 	if err != nil {
