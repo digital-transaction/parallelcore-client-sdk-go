@@ -414,6 +414,10 @@ func (client *Client) GetSmartContractTransactionJson(transactionId string) ([]b
 	return client.UserMan([]byte("GetSmartContractTransactionJson " + transactionId))
 }
 
+func (client *Client) ListLatestTransactions(count int) ([]byte, error) {
+	return client.UserMan([]byte("ListLatestTransactions " + strconv.Itoa(count)))
+}
+
 func (client *Client) UserMan(in []byte) ([]byte, error) {
 	response, err := client.grpcClient.UserMan(client.ctx, &pb.Request{Payload: in})
 	if err != nil {
