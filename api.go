@@ -414,6 +414,10 @@ func (client *Client) GetSmartContractTransactionJson(transactionId string) ([]b
 	return client.UserMan([]byte("GetSmartContractTransactionJson " + transactionId))
 }
 
+func (client *Client) GetSmartContractTransactionMetadataJson(transactionId string) ([]byte, error) {
+	return client.UserMan([]byte("GetSmartContractTransactionMetadataJson " + transactionId))
+}
+
 func (client *Client) ListLatestTransactions(count int) ([]byte, error) {
 	return client.UserMan([]byte("ListLatestTransactions " + strconv.Itoa(count)))
 }
