@@ -394,6 +394,10 @@ func (client *Client) SysMan(in []byte) ([]byte, error) {
 	return response.Payload, nil
 }
 
+func (client *Client) UpdateClient(opts string) ([]byte, error) {
+	return client.UserMan([]byte(opts))
+}
+
 func (client *Client) ListInvokableSC() ([]byte, error) {
 	return client.UserMan([]byte("ListInvokableSC"))
 }
