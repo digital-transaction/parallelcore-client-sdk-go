@@ -18,11 +18,29 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"encoding/json"
 )
 
 // customCredential, which stores the JWT
 type customCredential struct {
 	token string
+}
+
+// UserManData for parsing JSON
+type UserManData struct {
+	Action string `json:"action"`
+	Data   []byte `json:"data"`
+}
+
+type BlockData struct {
+	ChainId string `json: "chainId"`
+	BlockId string `json: "blockId"`
+}
+
+type ClientData struct {
+	ID         string `json:"clientId"`
+	Credential string `json:"clientCredential"`
+	Roles      string `json:"clientRoles"`
 }
 
 func (t customCredential) GetRequestMetadata(ctx context.Context, uri ...string) (map[string]string, error) {
@@ -394,39 +412,139 @@ func (client *Client) SysMan(in []byte) ([]byte, error) {
 	return response.Payload, nil
 }
 
-func (client *Client) UpdateClient(opts string) ([]byte, error) {
-	return client.UserMan([]byte(opts))
+func (client *Client) UpdateClient(clientId, credential string) ([]byte, error) {
+
+	userManData := UserManData{}
+	userManData.Action = "update"
+	clientData := ClientData{}
+	clientData.ID = clientId
+	clientData.Credential = credential
+	// roles is empty!
+	jsonDataClient, err := json.Marshal(clientData)
+	if err != nil {
+		return nil, fmt.Errorf("CLIENT: %s\n", err.Error())
+	}
+
+	userManData.Data = jsonDataClient
+
+	jsonData, err := json.Marshal(userManData)
+	if err != nil {
+		return nil, fmt.Errorf("CLIENT: %s\n", err.Error())
+	}
+
+	return client.userMan(jsonData)
 }
 
 func (client *Client) ListInvokableSC() ([]byte, error) {
-	return client.UserMan([]byte("ListInvokableSC"))
+	userManData := UserManData{}
+	userManData.Action = "ListInvokableSC"
+	opts, err := json.Marshal(userManData)
+	if err != nil {
+		return nil, fmt.Errorf("CLIENT: %s\n", err.Error())
+	}
+	return client.userMan(opts)
 }
 
 func (client *Client) GetBlockchainSummaryJson() ([]byte, error) {
-	return client.UserMan([]byte("GetBlockchainSummaryJson"))
+	userManData := UserManData{}
+	userManData.Action = "GetBlockchainSummaryJson"
+	jsonData, err := json.Marshal(userManData)
+	if err != nil {
+		return nil, fmt.Errorf("CLIENT: %s\n", err.Error())
+	}
+	return client.userMan(jsonData)
 }
 
 func (client *Client) GetBlockDetailsJson(chainId, blockId string) ([]byte, error) {
-	return client.UserMan([]byte("GetBlockDetailsJson " + chainId + " " + blockId))
+	userManData := UserManData{}
+	userManData.Action = "GetBlockDetailsJson"
+	blockData := BlockData{}
+	blockData.ChainId = chainId
+	blockData.BlockId = blockId
+
+	jsonDataBlock, err := json.Marshal(blockData)
+	if err != nil {
+		return nil, fmt.Errorf("CLIENT: %s\n", err.Error())
+	}
+
+	userManData.Data = jsonDataBlock
+
+	jsonData, err := json.Marshal(userManData)
+	if err != nil {
+		return nil, fmt.Errorf("CLIENT: %s\n", err.Error())
+	}
+	return client.userMan(jsonData)
+	// return client.userMan([]byte("GetBlockDetailsJson " + chainId + " " + blockId))
 }
 
 func (client *Client) CalculateBlockHash(chainId, blockId string) ([]byte, error) {
-	return client.UserMan([]byte("CalculateBlockHash " + chainId + " " + blockId))
+	userManData := UserManData{}
+	userManData.Action = "CalculateBlockHash"
+	blockData := BlockData{}
+	blockData.ChainId = chainId
+	blockData.BlockId = blockId
+
+	jsonDataBlock, err := json.Marshal(blockData)
+	if err != nil {
+		return nil, fmt.Errorf("CLIENT: %s\n", err.Error())
+	}
+
+	userManData.Data = jsonDataBlock
+	
+	jsonData, err := json.Marshal(userManData)
+	if err != nil {
+		return nil, fmt.Errorf("CLIENT: %s\n", err.Error())
+	}
+
+	return client.userMan(jsonData)
+	// return client.userMan([]byte("CalculateBlockHash " + chainId + " " + blockId))  
 }
 
 func (client *Client) GetSmartContractTransactionJson(transactionId string) ([]byte, error) {
-	return client.UserMan([]byte("GetSmartContractTransactionJson " + transactionId))
+	userManData := UserManData{}
+	userManData.Action = "GetSmartContractTransactionJson"
+	userManData.Data = []byte(transactionId)
+	jsonData, err := json.Marshal(userManData)
+	if err != nil {
+		return nil, fmt.Errorf("CLIENT: %s\n", err.Error())
+	}
+	return client.userMan(jsonData)
+	// return client.userMan([]byte("GetSmartContractTransactionJson " + transactionId))
 }
 
 func (client *Client) GetSmartContractTransactionMetadataJson(transactionId string) ([]byte, error) {
-	return client.UserMan([]byte("GetSmartContractTransactionMetadataJson " + transactionId))
+	userManData := UserManData{}
+	userManData.Action = "GetSmartContractTransactionMetadataJson"
+	userManData.Data = []byte(transactionId)
+	jsonData, err := json.Marshal(userManData)
+	if err != nil {
+		return nil, fmt.Errorf("CLIENT: %s\n", err.Error())
+	}
+	return client.userMan(jsonData)
+	// return client.userMan([]byte("GetSmartContractTransactionMetadataJson " + transactionId))
 }
 
 func (client *Client) ListLatestTransactions(count int) ([]byte, error) {
-	return client.UserMan([]byte("ListLatestTransactions " + strconv.Itoa(count)))
+	userManData := UserManData{}
+	userManData.Action = "ListLatestTransactions"
+
+	// integer check in cli main.go
+	jsonCount, err := json.Marshal(count)
+	if err != nil {
+		return nil, fmt.Errorf("CLIENT: %s\n", err.Error())
+	}
+
+	userManData.Data = jsonCount
+
+	jsonData, err := json.Marshal(userManData)
+	if err != nil {
+		return nil, fmt.Errorf("CLIENT: %s\n", err.Error())
+	}
+	return client.userMan(jsonData)
+	// return client.userMan([]byte("ListLatestTransactions " + strconv.Itoa(count)))
 }
 
-func (client *Client) UserMan(in []byte) ([]byte, error) {
+func (client *Client) userMan(in []byte) ([]byte, error) {
 	response, err := client.grpcClient.UserMan(client.ctx, &pb.Request{Payload: in})
 	if err != nil {
 		return nil, fmt.Errorf("CLIENT: %v", err)
