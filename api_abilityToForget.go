@@ -9,9 +9,20 @@ package parallelcore_client_sdk_go
 import (
 	"encoding/json"
 	"fmt"
-
-	"git.digital-transaction.org/cdb/pcoredb-sdk-go/pcoredb"
 )
+
+// ForgetGroup
+type ForgetGroup struct {
+	TxIds []string
+}
+
+// ForgetReport
+type ForgetReport struct {
+	Deleted        []string
+	AlreadyDeleted []string
+	NotFound       []string
+	CommitTxId     string
+}
 
 type requstForgetParams struct {
 	TxIds []string `json:"tx_ids"`
@@ -75,8 +86,8 @@ func (client *Client) ApproveForget(requestTxId string) (string, error) {
 
 // CommitForget performs the actual deletion of chunkset based on the
 // information from the given request transaction id.
-func (client *Client) CommitForget(requestTxId string, approvalTxids []string) (pcoredb.ForgetReport, error) {
-	var report pcoredb.ForgetReport
+func (client *Client) CommitForget(requestTxId string, approvalTxids []string) (ForgetReport, error) {
+	var report ForgetReport
 
 	data, err := json.Marshal(commitForgetParams{RequestTxId: requestTxId, ApprovalTxIds: approvalTxids})
 	if err != nil {
@@ -101,8 +112,8 @@ func (client *Client) CommitForget(requestTxId string, approvalTxids []string) (
 	return report, nil
 }
 
-func (client *Client) ListForgetGroups(txIds []string) ([]pcoredb.ForgetGroup, error) {
-	var groups []pcoredb.ForgetGroup
+func (client *Client) ListForgetGroups(txIds []string) ([]ForgetGroup, error) {
+	var groups []ForgetGroup
 
 	data, err := json.Marshal(txIds)
 	if err != nil {
