@@ -13,7 +13,7 @@ import (
 
 // ForgetGroup
 type ForgetGroup struct {
-	TxIds []string
+	TxIds []string `json:"tx_ids"`
 }
 
 // ForgetReport
