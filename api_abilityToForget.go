@@ -130,6 +130,8 @@ func (client *Client) ListForgetGroups(txIds []string) ([]ForgetGroup, error) {
 		return groups, err
 	}
 
+	fmt.Println("DEBUG: ListForgetGroups: " + result)
+
 	err = json.Unmarshal(result, &groups)
 	if err != nil {
 		return groups, fmt.Errorf("CLIENT: %s\n", err.Error())
