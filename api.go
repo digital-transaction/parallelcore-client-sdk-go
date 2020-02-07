@@ -9,16 +9,18 @@ package parallelcore_client_sdk_go
 import (
 	"context"
 	"crypto/tls"
+	"encoding/json"
+	"errors"
 	"fmt"
-	pb "github.com/digital-transaction/parallelcore-client-sdk-go/engine_client_proto"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
 	"math/rand"
 	"os"
 	"strconv"
 	"strings"
 	"time"
-	"encoding/json"
+
+	pb "github.com/digital-transaction/parallelcore-client-sdk-go/engine_client_proto"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 // customCredential, which stores the JWT
@@ -55,8 +57,6 @@ func (t customCredential) RequireTransportSecurity() bool {
 
 type Client struct {
 	conn            *grpc.ClientConn
-	ctx             context.Context
-	cancel          context.CancelFunc
 	grpcClient      pb.RequestHandlerClient
 	endpointSpecs   string
 	certPath        string
@@ -71,7 +71,6 @@ func OpenAnyWithCert(endpointSpecs string, clientId string, credential string) (
 	} else {
 		return OpenAny(endpointSpecs, clientId, credential, tlsCertPath)
 	}
-	return nil, fmt.Errorf("Error when using OpenAnyWithCert()")
 }
 
 func OpenAnyByTokenWithCert(endpointSpecs string, token string, expireTimestamp int64) (*Client, error) {
@@ -81,7 +80,6 @@ func OpenAnyByTokenWithCert(endpointSpecs string, token string, expireTimestamp 
 	} else {
 		return OpenAnyByToken(endpointSpecs, token, expireTimestamp, tlsCertPath)
 	}
-	return nil, fmt.Errorf("Error when using OpenAnyByTokenWithCert()")
 }
 
 func OpenManyWithCert(endpointSpecs string, clientId string, credential string) ([]*Client, error) {
@@ -91,7 +89,6 @@ func OpenManyWithCert(endpointSpecs string, clientId string, credential string) 
 	} else {
 		return OpenMany(endpointSpecs, clientId, credential, tlsCertPath)
 	}
-	return nil, fmt.Errorf("Error when using OpenManyWithCert()")
 }
 
 func OpenManyByTokenWithCert(endpointSpecs string, token string, expireTimestamp int64) ([]*Client, error) {
@@ -101,7 +98,6 @@ func OpenManyByTokenWithCert(endpointSpecs string, token string, expireTimestamp
 	} else {
 		return OpenManyByToken(endpointSpecs, token, expireTimestamp, tlsCertPath)
 	}
-	return nil, fmt.Errorf("Error when using OpenManyByTokenWithCert()")
 }
 
 func openOne(endpoint string, certPath string, token string) (*Client, error) {
@@ -144,8 +140,8 @@ func openOne(endpoint string, certPath string, token string) (*Client, error) {
 	}
 
 	grpcClient := pb.NewRequestHandlerClient(conn)
-	ctx, cancel := context.WithCancel(context.Background())
 
+	ctx, cancel := context.WithCancel(context.Background())
 	response, err := grpcClient.Ping(ctx, &pb.Request{Payload: []byte("")})
 	if err != nil {
 		cancel()
@@ -158,7 +154,8 @@ func openOne(endpoint string, certPath string, token string) (*Client, error) {
 		return nil, fmt.Errorf("Ping wrong response value. %v", response.Payload)
 	}
 
-	return &Client{conn, ctx, cancel, grpcClient, "", certPath, token, 0}, nil
+	cancel()
+	return &Client{conn, grpcClient, "", certPath, token, 0}, nil
 }
 
 // certPath: if empty, use the system certificate, otherwise, use the certificate provided in the file in certPath
@@ -344,7 +341,6 @@ func CloseMany(clients []*Client) {
 }
 
 func (client *Client) Close() {
-	client.cancel()
 	client.conn.Close()
 }
 
@@ -357,13 +353,17 @@ func (client *Client) GetTokenExpTime() int64 {
 }
 
 func (client *Client) invoke(in []byte) ([]byte, error) {
-	response, err := client.grpcClient.Invoke(client.ctx, &pb.Request{Payload: in})
+	ctx, cancel := context.WithCancel(context.Background())
+	response, err := client.grpcClient.Invoke(ctx, &pb.Request{Payload: in})
 	if err != nil {
+		cancel()
 		return nil, fmt.Errorf("CLIENT: %v", err)
 	}
 	if len(response.Error) != 0 {
+		cancel()
 		return nil, fmt.Errorf("%v", string(response.Error))
 	}
+	cancel()
 	return response.Payload, nil
 }
 
@@ -374,13 +374,17 @@ func (client *Client) Invoke(smartcontract_spec string, args []byte) ([]byte, er
 }
 
 func (client *Client) identifiedInvoke(in []byte) ([]byte, string, error) {
-	response, err := client.grpcClient.IdentifiedInvoke(client.ctx, &pb.Request{Payload: in})
+	ctx, cancel := context.WithCancel(context.Background())
+	response, err := client.grpcClient.IdentifiedInvoke(ctx, &pb.Request{Payload: in})
 	if err != nil {
+		cancel()
 		return nil, "", fmt.Errorf("CLIENT: %v", err)
 	}
 	if len(response.Error) != 0 {
+		cancel()
 		return nil, "", fmt.Errorf("%v", string(response.Error))
 	}
+	cancel()
 	return response.Payload, string(response.CommittedId), nil
 }
 
@@ -391,24 +395,122 @@ func (client *Client) IdentifiedInvoke(smartcontract_spec string, args []byte) (
 }
 
 func (client *Client) auth(clientId []byte, credential []byte) ([]byte, error) {
-	response, err := client.grpcClient.Auth(client.ctx, &pb.AuthRequest{ClientId: clientId, Credential: credential})
+	ctx, cancel := context.WithCancel(context.Background())
+	response, err := client.grpcClient.Auth(ctx, &pb.AuthRequest{ClientId: clientId, Credential: credential})
 	if err != nil {
+		cancel()
 		return nil, fmt.Errorf("CLIENT: %v", err)
 	}
 	if len(response.Error) != 0 {
+		cancel()
 		return nil, fmt.Errorf("%v", string(response.Error))
 	}
+	cancel()
 	return response.Payload, nil
 }
 
 func (client *Client) SysMan(in []byte) ([]byte, error) {
-	response, err := client.grpcClient.SysMan(client.ctx, &pb.Request{Payload: in})
+	ctx, cancel := context.WithCancel(context.Background())
+	response, err := client.grpcClient.SysMan(ctx, &pb.Request{Payload: in})
 	if err != nil {
+		cancel()
 		return nil, fmt.Errorf("CLIENT: %v", err)
 	}
 	if len(response.Error) != 0 {
+		cancel()
 		return nil, fmt.Errorf("%v", string(response.Error))
 	}
+	cancel()
+	return response.Payload, nil
+}
+
+func (client *Client) RegisterSmartContract(in []byte) ([]byte, error) {
+	ctx, cancel := context.WithCancel(context.Background())
+	response, err := client.grpcClient.RegisterSmartContract(ctx, &pb.Request{Payload: in})
+	if err != nil {
+		cancel()
+		return nil, fmt.Errorf("CLIENT: %v", err)
+	}
+	if len(response.Error) != 0 {
+		cancel()
+		return nil, fmt.Errorf("%v", string(response.Error))
+	}
+	cancel()
+	return response.Payload, nil
+}
+
+func (client *Client) CreateDomain(in []byte) ([]byte, error) {
+	ctx, cancel := context.WithCancel(context.Background())
+	response, err := client.grpcClient.CreateDomain(ctx, &pb.Request{Payload: in})
+	if err != nil {
+		cancel()
+		return nil, fmt.Errorf("CLIENT: %v", err)
+	}
+	if len(response.Error) != 0 {
+		cancel()
+		return nil, fmt.Errorf("%v", string(response.Error))
+	}
+	cancel()
+	return response.Payload, nil
+}
+
+func (client *Client) ListDomain(in []byte) ([]byte, error) {
+	ctx, cancel := context.WithCancel(context.Background())
+	response, err := client.grpcClient.ListDomain(ctx, &pb.Request{Payload: in})
+	if err != nil {
+		cancel()
+		return nil, fmt.Errorf("CLIENT: %v", err)
+	}
+	if len(response.Error) != 0 {
+		cancel()
+		return nil, fmt.Errorf("%v", string(response.Error))
+	}
+	cancel()
+	return response.Payload, nil
+}
+
+func (client *Client) ListManagedDomains(in []byte) ([]byte, error) {
+	ctx, cancel := context.WithCancel(context.Background())
+	response, err := client.grpcClient.ListManagedDomains(ctx, &pb.Request{Payload: in})
+	if err != nil {
+		cancel()
+		return nil, fmt.Errorf("CLIENT: %v", err)
+	}
+	if len(response.Error) != 0 {
+		cancel()
+		return nil, fmt.Errorf("%v", string(response.Error))
+	}
+	cancel()
+	return response.Payload, nil
+}
+
+func (client *Client) GrantDomainAdmin(in []byte) ([]byte, error) {
+	ctx, cancel := context.WithCancel(context.Background())
+	response, err := client.grpcClient.GrantDomainAdmin(ctx, &pb.Request{Payload: in})
+	if err != nil {
+		cancel()
+		return nil, fmt.Errorf("CLIENT: %v", err)
+	}
+	if len(response.Error) != 0 {
+		cancel()
+		return nil, fmt.Errorf("%v", string(response.Error))
+	}
+	cancel()
+	return response.Payload, nil
+}
+
+func (client *Client) RevokeDomainAdmin(in []byte) ([]byte, error) {
+	ctx, cancel := context.WithCancel(context.Background())
+	response, err := client.grpcClient.RevokeDomainAdmin(ctx, &pb.Request{Payload: in})
+	if err != nil {
+		cancel()
+		return nil, fmt.Errorf("CLIENT: %v", err)
+	}
+	if len(response.Error) != 0 {
+		cancel()
+		return nil, fmt.Errorf("%v", string(response.Error))
+	}
+	cancel()
 	return response.Payload, nil
 }
 
@@ -490,14 +592,14 @@ func (client *Client) CalculateBlockHash(chainId, blockId string) ([]byte, error
 	}
 
 	userManData.Data = jsonDataBlock
-	
+
 	jsonData, err := json.Marshal(userManData)
 	if err != nil {
 		return nil, fmt.Errorf("CLIENT: %s\n", err.Error())
 	}
 
 	return client.userMan(jsonData)
-	// return client.userMan([]byte("CalculateBlockHash " + chainId + " " + blockId))  
+	// return client.userMan([]byte("CalculateBlockHash " + chainId + " " + blockId))
 }
 
 func (client *Client) GetSmartContractTransactionJson(transactionId string) ([]byte, error) {
@@ -545,37 +647,47 @@ func (client *Client) ListLatestTransactions(count int) ([]byte, error) {
 }
 
 func (client *Client) userMan(in []byte) ([]byte, error) {
-	response, err := client.grpcClient.UserMan(client.ctx, &pb.Request{Payload: in})
+	ctx, cancel := context.WithCancel(context.Background())
+	response, err := client.grpcClient.UserMan(ctx, &pb.Request{Payload: in})
 	if err != nil {
+		cancel()
 		return nil, fmt.Errorf("CLIENT: %v", err)
 	}
 	if len(response.Error) != 0 {
+		cancel()
 		return nil, fmt.Errorf("%v", string(response.Error))
 	}
+	cancel()
 	return response.Payload, nil
 }
 
 func (client *Client) renewToken() (string, int64, error) {
 	// Fetch new JWT and expireTimestamp
-	response, err := client.grpcClient.Renew(client.ctx, &pb.Request{Payload: []byte("")})
+	ctx, cancel := context.WithCancel(context.Background())
+	response, err := client.grpcClient.Renew(ctx, &pb.Request{Payload: []byte("")})
 	if err != nil {
+		cancel()
 		return "", 0, fmt.Errorf("CLIENT: %v", err)
 	}
 	if len(response.Error) != 0 {
+		cancel()
 		return "", 0, fmt.Errorf("%v", string(response.Error))
 	}
 
 	// Parse returnBytes
 	tmpArray := strings.Split(string(response.Payload), " ")
 	if len(tmpArray) != 2 {
+		cancel()
 		return "", 0, fmt.Errorf("SYSTEM: Wrong format message from RenewToken().")
 	}
 	token := tmpArray[0]
 	expireTimestamp, err := strconv.ParseInt(tmpArray[1], 10, 64)
 	if err != nil {
+		cancel()
 		return "", 0, fmt.Errorf("SYSTEM: Wrong format of expireTimestamp. %v", err)
 	}
 
+	cancel()
 	return token, expireTimestamp, nil
 }
 
@@ -610,4 +722,40 @@ func (client *Client) Renew() error {
 		return nil
 	}
 	return fmt.Errorf("CLIENT: Failed to renew a connection. %v", lastError)
+}
+
+func (client *Client) CheckApiAccess(in []byte) ([]byte, error) {
+
+	ctx, cancel := context.WithCancel(context.Background())
+	result, err := client.grpcClient.CheckApiAccess(ctx, &pb.Request{Payload: in})
+	if err != nil {
+		cancel()
+		return nil, fmt.Errorf("CLIENT: %v", err)
+	}
+	if result.Error != nil {
+		cancel()
+		return nil, errors.New(string(result.Error))
+	}
+
+	cancel()
+	return result.Payload, nil
+
+}
+
+func (client *Client) ManageApiAccess(in []byte) ([]byte, error) {
+
+	ctx, cancel := context.WithCancel(context.Background())
+	result, err := client.grpcClient.ManageApiAccess(ctx, &pb.Request{Payload: in})
+	if err != nil {
+		cancel()
+		return nil, fmt.Errorf("CLIENT: %v", err)
+	}
+	if result.Error != nil {
+		cancel()
+		return nil, errors.New(string(result.Error))
+	}
+
+	cancel()
+	return result.Payload, nil
+
 }

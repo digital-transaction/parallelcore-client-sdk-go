@@ -16,6 +16,15 @@ service RequestHandler {
   rpc Renew(Request) returns (Response) {}
   rpc Auth(AuthRequest) returns (Response) {}
   rpc Ping(Request) returns (Response) {}
+  rpc RegisterEventListener(stream Request) returns (stream Response) {}
+  rpc ManageApiAccess(Request) returns (Response) {}
+  rpc CheckApiAccess(Request) returns (Response) {}
+  rpc RegisterSmartContract(Request) returns (Response) {}
+  rpc CreateDomain(Request) returns (Response) {}
+  rpc ListDomain(Request) returns (Response) {}
+  rpc ListManagedDomains(Request) returns (Response) {}
+  rpc GrantDomainAdmin(Request) returns (Response) {}
+  rpc RevokeDomainAdmin(Request) returns (Response) {}
 }
 
 message AuthRequest {
@@ -37,4 +46,3 @@ message IdentifiedResponse {
   bytes committedId = 2;
   bytes error = 3;
 }
-
