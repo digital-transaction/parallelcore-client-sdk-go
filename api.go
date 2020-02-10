@@ -514,10 +514,145 @@ func (client *Client) RevokeDomainAdmin(in []byte) ([]byte, error) {
 	return response.Payload, nil
 }
 
-func (client *Client) UpdateClient(clientId, credential string) ([]byte, error) {
+func (client *Client) CreateClient(in []byte) ([]byte, error) {
+	ctx, cancel := context.WithCancel(context.Background())
+	response, err := client.grpcClient.CreateClient(ctx, &pb.Request{Payload: in})
+	if err != nil {
+		cancel()
+		return nil, fmt.Errorf("CLIENT: %v", err)
+	}
+	if len(response.Error) != 0 {
+		cancel()
+		return nil, fmt.Errorf("%v", string(response.Error))
+	}
+	cancel()
+	return response.Payload, nil
+}
+
+func (client *Client) UpdateClient(in []byte) ([]byte, error) {
+	ctx, cancel := context.WithCancel(context.Background())
+	response, err := client.grpcClient.UpdateClient(ctx, &pb.Request{Payload: in})
+	if err != nil {
+		cancel()
+		return nil, fmt.Errorf("CLIENT: %v", err)
+	}
+	if len(response.Error) != 0 {
+		cancel()
+		return nil, fmt.Errorf("%v", string(response.Error))
+	}
+	cancel()
+	return response.Payload, nil
+}
+
+func (client *Client) ListClient(in []byte) ([]byte, error) {
+	ctx, cancel := context.WithCancel(context.Background())
+	response, err := client.grpcClient.ListClient(ctx, &pb.Request{Payload: in})
+	if err != nil {
+		cancel()
+		return nil, fmt.Errorf("CLIENT: %v", err)
+	}
+	if len(response.Error) != 0 {
+		cancel()
+		return nil, fmt.Errorf("%v", string(response.Error))
+	}
+	cancel()
+	return response.Payload, nil
+}
+
+func (client *Client) ListClients(in []byte) ([]byte, error) {
+	ctx, cancel := context.WithCancel(context.Background())
+	response, err := client.grpcClient.ListClients(ctx, &pb.Request{Payload: in})
+	if err != nil {
+		cancel()
+		return nil, fmt.Errorf("CLIENT: %v", err)
+	}
+	if len(response.Error) != 0 {
+		cancel()
+		return nil, fmt.Errorf("%v", string(response.Error))
+	}
+	cancel()
+	return response.Payload, nil
+}
+
+func (client *Client) RemoveClient(in []byte) ([]byte, error) {
+	ctx, cancel := context.WithCancel(context.Background())
+	response, err := client.grpcClient.RemoveClient(ctx, &pb.Request{Payload: in})
+	if err != nil {
+		cancel()
+		return nil, fmt.Errorf("CLIENT: %v", err)
+	}
+	if len(response.Error) != 0 {
+		cancel()
+		return nil, fmt.Errorf("%v", string(response.Error))
+	}
+	cancel()
+	return response.Payload, nil
+}
+
+func (client *Client) GrantAccess(in []byte) ([]byte, error) {
+	ctx, cancel := context.WithCancel(context.Background())
+	response, err := client.grpcClient.GrantAccess(ctx, &pb.Request{Payload: in})
+	if err != nil {
+		cancel()
+		return nil, fmt.Errorf("CLIENT: %v", err)
+	}
+	if len(response.Error) != 0 {
+		cancel()
+		return nil, fmt.Errorf("%v", string(response.Error))
+	}
+	cancel()
+	return response.Payload, nil
+}
+
+func (client *Client) RevokeAccess(in []byte) ([]byte, error) {
+	ctx, cancel := context.WithCancel(context.Background())
+	response, err := client.grpcClient.RevokeAccess(ctx, &pb.Request{Payload: in})
+	if err != nil {
+		cancel()
+		return nil, fmt.Errorf("CLIENT: %v", err)
+	}
+	if len(response.Error) != 0 {
+		cancel()
+		return nil, fmt.Errorf("%v", string(response.Error))
+	}
+	cancel()
+	return response.Payload, nil
+}
+
+func (client *Client) ListSmartContract(in []byte) ([]byte, error) {
+	ctx, cancel := context.WithCancel(context.Background())
+	response, err := client.grpcClient.ListSmartContract(ctx, &pb.Request{Payload: in})
+	if err != nil {
+		cancel()
+		return nil, fmt.Errorf("CLIENT: %v", err)
+	}
+	if len(response.Error) != 0 {
+		cancel()
+		return nil, fmt.Errorf("%v", string(response.Error))
+	}
+	cancel()
+	return response.Payload, nil
+}
+
+func (client *Client) ListSmartContracts(in []byte) ([]byte, error) {
+	ctx, cancel := context.WithCancel(context.Background())
+	response, err := client.grpcClient.ListSmartContracts(ctx, &pb.Request{Payload: in})
+	if err != nil {
+		cancel()
+		return nil, fmt.Errorf("CLIENT: %v", err)
+	}
+	if len(response.Error) != 0 {
+		cancel()
+		return nil, fmt.Errorf("%v", string(response.Error))
+	}
+	cancel()
+	return response.Payload, nil
+}
+
+func (client *Client) UpdateSelfCredential(clientId, credential string) ([]byte, error) {
 
 	userManData := UserManData{}
-	userManData.Action = "update"
+	userManData.Action = "updateSelfCredential"
 	clientData := ClientData{}
 	clientData.ID = clientId
 	clientData.Credential = credential
