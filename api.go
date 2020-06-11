@@ -1,8 +1,6 @@
 //
 // Copyright 2019 Digital Transaction Limited. All Rights Reserved.
 //
-// Authors: Yang SONG, Eric Ma, Ray Chan
-//
 
 package parallelcore_client_sdk_go
 
