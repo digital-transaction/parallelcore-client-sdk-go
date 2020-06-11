@@ -1,8 +1,6 @@
 //
 // Copyright 2018 Digital Transaction Limited. All Rights Reserved.
 //
-// Authors: Yang SONG, Eric Ma
-//
 
 syntax = "proto3";
 
