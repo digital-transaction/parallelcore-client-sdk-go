@@ -16,10 +16,10 @@ type ForgetGroup struct {
 
 // ForgetReport
 type ForgetReport struct {
-	Deleted        []string
-	AlreadyDeleted []string
-	NotFound       []string
-	CommitTxId     string
+	Deleted        []string `json:"deleted"`
+	AlreadyDeleted []string `json:"already_deleted"`
+	NotFound       []string `json:"not_found"`
+	CommitTxId     string   `json:"commit_tx_id"`
 }
 
 type requstForgetParams struct {
