@@ -1,5 +1,6 @@
 //
-// Copyright 2019 Digital Transaction Limited. All Rights Reserved.
+// Copyright 2019 Digital Transaction Limited.
+// All Rights Reserved.
 //
 
 package parallelcore_client_sdk_go
@@ -8,11 +9,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	pb "github.com/digital-transaction/parallelcore-client-sdk-go/engine_client_proto"
-	"google.golang.org/grpc"
 	"io"
 	"regexp"
 	"time"
+
+	pb "github.com/digital-transaction/parallelcore-client-sdk-go/engine_client_proto"
+
+	"google.golang.org/grpc"
 )
 
 type RegisterEventListenerRequest struct {
@@ -32,13 +35,17 @@ type ScEvent struct {
 	Payload   string `json:"payload"`
 }
 
+/******************************************************************************/
+/*                                                                            */
+/* Register Event Listener                                                    */
+/*                                                                            */
+/******************************************************************************/
 func (client *Client) RegisterEventListener(scName string, eventFilter string) (*ListenerController, <-chan *EventWrapper, error) {
-
 	// Check regular expression is valid
 	_, err := regexp.Compile(eventFilter)
 	if err != nil {
 		client.Close()
-		return nil, nil, fmt.Errorf("CLIENT: %v", err)
+		return nil, nil, fmt.Errorf("CLIENT: %w", err)
 	}
 
 	// Prepare the request
@@ -49,28 +56,28 @@ func (client *Client) RegisterEventListener(scName string, eventFilter string) (
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
 		client.Close()
-		return nil, nil, fmt.Errorf("CLIENT: %v", err)
+		return nil, nil, fmt.Errorf("CLIENT: %w", err)
 	}
 
 	// Establish stream connection first
 	stream, err := client.grpcClient.RegisterEventListener(context.Background())
 	if err != nil {
 		client.Close()
-		return nil, nil, fmt.Errorf("CLIENT: %v", err)
+		return nil, nil, fmt.Errorf("CLIENT: %w", err)
 	}
 
 	// Send the event listener parameters
 	err = stream.Send(&pb.Request{Payload: payloadBytes})
 	if err != nil {
 		client.Close()
-		return nil, nil, fmt.Errorf("CLIENT: %v", err)
+		return nil, nil, fmt.Errorf("CLIENT: %w", err)
 	}
 
 	// Receive a success message from server
 	resp, err := stream.Recv()
 	if err != nil {
 		client.Close()
-		return nil, nil, fmt.Errorf("CLIENT: %v", err)
+		return nil, nil, fmt.Errorf("CLIENT: %w", err)
 	}
 	if resp.Error != nil {
 		client.Close()
@@ -87,13 +94,15 @@ func (client *Client) RegisterEventListener(scName string, eventFilter string) (
 	go client.listenEvents(stream, eventChannel, &streamAlive)
 
 	return &ListenerController{eventChannel: eventChannel, streamAlive: &streamAlive, conn: client.conn}, eventChannel, nil
-
 }
 
+/******************************************************************************/
+/*                                                                            */
+/* Listen Events                                                              */
+/*                                                                            */
+/******************************************************************************/
 func (client *Client) listenEvents(stream pb.RequestHandler_RegisterEventListenerClient, eventChannel chan *EventWrapper, streamAlive *bool) {
-
 	for {
-
 		resp, err := stream.Recv()
 		if err == io.EOF {
 			eventChannel <- &EventWrapper{
@@ -106,7 +115,7 @@ func (client *Client) listenEvents(stream pb.RequestHandler_RegisterEventListene
 		if err != nil {
 			eventChannel <- &EventWrapper{
 				ScEvent: nil,
-				Error:   fmt.Errorf("CLIENT: %v", err),
+				Error:   fmt.Errorf("CLIENT: %w", err),
 			}
 			closeEventListener(eventChannel, streamAlive)
 			return
@@ -139,18 +148,19 @@ func (client *Client) listenEvents(stream pb.RequestHandler_RegisterEventListene
 			ScEvent: &scEvent,
 			Error:   nil,
 		}
-
 	}
 
 	closeEventListener(eventChannel, streamAlive)
-	return
-
 }
 
+/******************************************************************************/
+/*                                                                            */
+/* Close Event Listener                                                       */
+/*                                                                            */
+/******************************************************************************/
 func closeEventListener(eventChannel chan *EventWrapper, streamAlive *bool) {
 	close(eventChannel)
 	*streamAlive = false
-	return
 }
 
 type ListenerController struct {
