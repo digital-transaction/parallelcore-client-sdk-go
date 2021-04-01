@@ -9,52 +9,49 @@
 
 package parallelcore_client_sdk_go
 
-import (
-	pb "github.com/digital-transaction/parallelcore-client-sdk-go/engine_client_proto"
-)
-
-/******************************************************************************/
-/*                                                                            */
-/* Request Forget                                                             */
-/*                                                                            */
-/******************************************************************************/
-// RequestForget request deletion of chunkset(s) covering the given txids.
-// It returns a requestTxId which is the transaction id for calling ApproveForget & CommitForget.
+// RequestForget requests deletion of all transactions specified in txIds.
+// The transactions specified in txIds form a 'forget group': either they are all deleted together,
+// or they are not deleted.
+//
+// It returns a string, forgetRequestTxID, which can be used to approve the forget
+// request using ApproveForget.
+//
+// Permissions: Only super-admins.
 func (client *Client) RequestForget(txIds []string) (string, error) {
-	x, err := callSysManV(client, API_REQUEST_FORGET, pb.RequestForgetParams{TxIds: txIds})
+	x, err := callSysManV(client, API_REQUEST_FORGET, RequestForgetParams{TxIds: txIds})
 	return string(x), err
 }
 
-/******************************************************************************/
-/*                                                                            */
-/* Approve Forget                                                             */
-/*                                                                            */
-/******************************************************************************/
-// ApproveForget approve deletion of the above forget request.
-// It returns a approvalTxId which provide approvals for calling CommitForget.
-func (client *Client) ApproveForget(requestTxId string) (string, error) {
-	x, err := callSysManV(client, API_APPROVE_FORGET, pb.ApproveForgetParams{RequestTxId: requestTxId})
+// ApproveForget approves deletion of a forget request created using RequestFormet
+// It returns a string, forgetApprovalTxID, which can be used to commit the forget request
+// using CommitForget.
+//
+// Permissions: Only super-admins.
+func (client *Client) ApproveForget(forgetRequestTxID string) (string, error) {
+	x, err := callSysManV(client, API_APPROVE_FORGET, ApproveForgetParams{RequestTxId: forgetRequestTxID})
 	return string(x), err
 }
 
-/******************************************************************************/
-/*                                                                            */
-/* Commit Forget                                                              */
-/*                                                                            */
-/******************************************************************************/
-// CommitForget performs the actual deletion of chunkset based on the
-// information from the given request transaction id.
-func (client *Client) CommitForget(requestTxId string, approvalTxids []string) (x pb.ForgetReport, err error) {
-	_, err = callSysManVV(client, API_COMMIT_FORGET, pb.CommitForgetParams{RequestTxId: requestTxId, ApprovalTxIds: approvalTxids}, &x)
+// CommitForget commits (actually performs) the deletion of all transactions specified
+// in the txIds originally passed to the RequestForget call that produced forgetRequestTxID.
+//
+// It returns a JSON-encoded object with keys:
+//  - deleted list: txIds in the forget group actually deleted by the commit
+//  - already_deleted list: txIds that were deleted before this commit
+//  - not_found: txIds in the forget group that were invalid or not found
+//  - commit_tx_id: transaction ID of the commit forget transaction.
+//
+// Permissions: Only super-admins.
+func (client *Client) CommitForget(forgetRequestTxID string, forgetApprovalTxID []string) (x ForgetReport, err error) {
+	_, err = callSysManVV(client, API_COMMIT_FORGET, CommitForgetParams{RequestTxId: forgetRequestTxID, ApprovalTxIds: forgetApprovalTxID}, &x)
 	return x, err
 }
 
-/******************************************************************************/
-/*                                                                            */
-/* List Forget Group                                                          */
-/*                                                                            */
-/******************************************************************************/
-func (client *Client) ListForgetGroups(txIds []string) (x []pb.ForgetGroup, err error) {
+// ListForgetGroups returns a list of all forget groups that cover all txIds (a super-set
+// of txIds).
+//
+// Permissions: Only super-admins.
+func (client *Client) ListForgetGroups(txIds []string) (x []ForgetGroup, err error) {
 	_, err = callSysManVV(client, API_LIST_FORGET_GROUPS, txIds, &x)
 	return x, err
 }

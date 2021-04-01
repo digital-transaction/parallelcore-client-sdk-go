@@ -16,51 +16,38 @@ import (
 	pb "github.com/digital-transaction/parallelcore-client-sdk-go/engine_client_proto"
 )
 
-/******************************************************************************/
-/*                                                                            */
-/* Authentication                                                             */
-/*                                                                            */
-/******************************************************************************/
-func (client *Client) auth(clientId []byte, credential []byte) ([]byte, error) {
+func (client *Client) auth(clientID []byte, credential []byte) ([]byte, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	response, err := client.grpcClient.Auth(ctx, &pb.AuthRequest{ClientId: clientId, Credential: credential})
+	response, err := client.grpcClient.Auth(ctx, &pb.AuthRequest{ClientId: clientID, Credential: credential})
 	return handleResponse(response, err, "auth")
 }
 
-/******************************************************************************/
-/*                                                                            */
-/* Update Self Credential                                                     */
-/*                                                                            */
-/******************************************************************************/
-func (client *Client) UpdateSelfCredential(clientId string, credential string) ([]byte, error) {
-	return callUserManV(client, API_UPDATE_SELF_CREDENTIAL, pb.ClientData{ID: clientId, Credential: credential})
+// UpdateSelfCredential is used to change the credential (password) of the user identified by
+// clientId. Users (even super-admins) can only change their own credentials. credential cannot
+// be an empty string.
+func (client *Client) UpdateSelfCredential(clientID string, credential string) ([]byte, error) {
+	return callUserManV(client, API_UPDATE_SELF_CREDENTIAL, UserData{ID: clientID, Credential: credential})
 }
 
-/******************************************************************************/
-/*                                                                            */
-/* Get Token                                                                  */
-/*                                                                            */
-/******************************************************************************/
+// GetToken is a getter for the private field client.token.
+//
+// client.token is used for token-based authentication using the Open*ByToken group of
+// functions.
 func (client *Client) GetToken() string {
 	return client.token
 }
 
-/******************************************************************************/
-/*                                                                            */
-/* Get Token Expiration Time                                                  */
-/*                                                                            */
-/******************************************************************************/
+// GetTokenExpTime is a getter for the private field client.expireTimestamp.
+//
+// client.expireTimestamp is used by applications to decide when to call Renew().
 func (client *Client) GetTokenExpTime() int64 {
 	return client.expireTimestamp
 }
 
-/******************************************************************************/
-/*                                                                            */
-/* Renew                                                                      */
-/*                                                                            */
-/******************************************************************************/
+// Renew asks a ParallelCore endpoint randomly selected from client.endpointSpecs
+// to renew the calling client's authentication token.
 func (client *Client) Renew() error {
 	token, expireTimestamp, err := client.renewToken()
 	if err != nil {

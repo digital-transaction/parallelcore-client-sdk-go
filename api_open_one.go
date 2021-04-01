@@ -41,7 +41,7 @@ func openOne(endpoint string, certPath string, token string) (_ *Client, err err
 
 	conn, err = grpc.Dial(endpoint, grpcOpts...)
 	if err != nil {
-		return nil, fmt.Errorf("CLIENT: openOne(%q): Failed to dail. %w", endpoint, err)
+		return nil, fmt.Errorf("CLIENT: openOne(%q): Failed to dial. %w", endpoint, err)
 	}
 	if conn.GetState() != connectivity.Ready {
 		return nil, fmt.Errorf("CLIENT: openOne(%q): Connection Failed", endpoint)
@@ -52,6 +52,7 @@ func openOne(endpoint string, certPath string, token string) (_ *Client, err err
 	return &Client{conn, grpcClient, "", certPath, token, 0}, nil
 }
 
+// Close closes a Client's connection.
 func (client *Client) Close() {
 	if client.conn != nil {
 		client.conn.Close()

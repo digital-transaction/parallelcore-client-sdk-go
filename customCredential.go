@@ -20,6 +20,9 @@ func (t customCredential) GetRequestMetadata(ctx context.Context, uri ...string)
 	}, nil
 }
 
+// RequireTransportSecurity returns true
+//
+// BUG(RequireTransportSecurity): RequireTransportSecurity: is trivial in the current release.
 func (t customCredential) RequireTransportSecurity() bool {
 	return true
 }

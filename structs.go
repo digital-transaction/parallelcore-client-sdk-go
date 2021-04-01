@@ -3,7 +3,12 @@
 // All Rights Reserved.
 //
 
-package engine_client_proto
+package parallelcore_client_sdk_go
+
+type InfoListData struct {
+	AllDomains bool   `json:"allDomains"`
+	DomainName string `json:"domainName"`
+}
 
 type UserManData struct {
 	Action string `json:"action"`
@@ -15,27 +20,35 @@ type SysManData struct {
 	Data   []byte `json:"data"`
 }
 
-type ScTask struct {
-	Action string `json:"action"`
-	Data   string `json:"data"`
-}
-
-type ClientData struct {
+type UserData struct {
 	ID         string `json:"clientId"`
 	Credential string `json:"clientCredential"`
 	Roles      string `json:"clientRoles"`
 	DomainName string `json:"clientDomainName"`
 }
 
-type ClientDomainData struct {
+type UserDomainData struct {
 	ID         string `json:"clientId"`
 	DomainName string `json:"clientDomainName"`
 }
 
-type ClientAccessData struct {
+type UserAccessData struct {
 	ID                string `json:"clientId"`
 	SmartContractName string `json:"scName"`
 	DomainName        string `json:"domainName"`
+}
+
+type UserFullData struct {
+	ID             string   `json:"clientId"`
+	Roles          []string `json:"roles"`
+	AccessList     []string `json:"accessList"`
+	Domains        []string `json:"domains"`
+	ManagedDomains []string `json:"managedDomains"`
+}
+
+type UserFullDataWrapper struct {
+	ID   string       `json:"clientId"`
+	Data UserFullData `json:"data"`
 }
 
 type ApiAccessControlData struct {

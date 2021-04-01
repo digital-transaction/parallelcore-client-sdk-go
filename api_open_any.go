@@ -7,29 +7,38 @@ package parallelcore_client_sdk_go
 
 import (
 	"fmt"
-	"math/rand"
 	"os"
 	"strings"
-	"time"
 )
 
 // certPath: if empty, use the system certificate, otherwise, use the certificate provided in the file in certPath
 
-func OpenAny(endpointSpecs string, clientId string, credential string, certPath string) (*Client, error) {
-	randGen := rand.New(rand.NewSource(time.Now().UnixNano()))
-
+// OpenAny establishes and returns one client connection to a ParallelChain peer. It takes in:
+//  - endpointSpecs string: space-delimited list of endpoints. This may contain however many endpoints,
+//  but OpenAny will only choose one to connect to. If a connection attempt fails, it will choose another
+//  endpoint.
+//  - clientID string
+//  - clientCredential string
+//  - certPath string: file path to a TLS certificate to set up an encrypted connection. If certPath is empty,
+//  the system certificate pool will be used.
+func OpenAny(endpointSpecs string, clientID string, credential string, certPath string) (*Client, error) {
 	// do until endpoints is empty:
-	//  randomly select endpoint from endpoints
+	//  select first endpoint from endpoints
 	//  try to openOne(endpoint) -> c
 	//  if ok
 	//    return c
 	//  remove endpoint from endpoints
 	// return error
-
 	var lastError error
+
+	if (oldEndpoints == "") || (oldEndpoints != endpointSpecs) {
+		oldEndpoints = endpointSpecs
+		endpointsCalled = 0
+	}
+
 	endpoints := strings.Split(endpointSpecs, " ")
 	for len(endpoints) != 0 {
-		i := randGen.Intn(len(endpoints))
+		i := endpointsCalled % len(endpoints)
 		endpoint := endpoints[i]
 
 		client, err := openOne(endpoint, certPath, "")
@@ -39,7 +48,7 @@ func OpenAny(endpointSpecs string, clientId string, credential string, certPath 
 			continue
 		}
 		// Successfully setup a connection, fetch the token and expireTimestamp
-		returnBytes, err := client.auth([]byte(clientId), []byte(credential))
+		returnBytes, err := client.auth([]byte(clientID), []byte(credential))
 		client.Close()
 		if err != nil {
 			return nil, fmt.Errorf("CLIENT: OpenAny(%q): Failed to auth. %w", endpointSpecs, err)
@@ -53,6 +62,7 @@ func OpenAny(endpointSpecs string, clientId string, credential string, certPath 
 		if err != nil {
 			return nil, fmt.Errorf("CLIENT: OpenAny(%q): Failed to open a connection. %w", endpointSpecs, err)
 		}
+		endpointsCalled++
 		client.expireTimestamp = expireTimestamp
 		client.endpointSpecs = endpointSpecs
 
@@ -62,6 +72,8 @@ func OpenAny(endpointSpecs string, clientId string, credential string, certPath 
 	return nil, fmt.Errorf("CLIENT: OpenAny(%q): Failed to open any client. Last error: %w", endpointSpecs, lastError)
 }
 
-func OpenAnyWithCert(endpointSpecs string, clientId string, credential string) (*Client, error) {
-	return OpenAny(endpointSpecs, clientId, credential, os.Getenv("PCORE_CERT_PATH"))
+// OpenAnyWithCert is a wrapper around OpenAny. It calls OpenAny with os.Getenv("PCORE_CERT_PATH")
+// as the certPath parameter.
+func OpenAnyWithCert(endpointSpecs string, clientID string, credential string) (*Client, error) {
+	return OpenAny(endpointSpecs, clientID, credential, os.Getenv("PCORE_CERT_PATH"))
 }

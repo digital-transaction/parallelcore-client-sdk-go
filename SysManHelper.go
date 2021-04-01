@@ -8,13 +8,11 @@ package parallelcore_client_sdk_go
 import (
 	"encoding/json"
 	"fmt"
-
-	pb "github.com/digital-transaction/parallelcore-client-sdk-go/engine_client_proto"
 )
 
 func callSysMan(client *Client, action string, data []byte) ([]byte, error) {
 	// Encode Task
-	task, err := json.Marshal(pb.SysManData{Action: action, Data: data})
+	task, err := json.Marshal(SysManData{Action: action, Data: data})
 	if err != nil {
 		return nil, fmt.Errorf(FMT_FUNC_X_TASK_ENCODE_ERROR_X, action, err)
 	}

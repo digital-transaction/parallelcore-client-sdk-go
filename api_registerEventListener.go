@@ -35,11 +35,7 @@ type ScEvent struct {
 	Payload   string `json:"payload"`
 }
 
-/******************************************************************************/
-/*                                                                            */
-/* Register Event Listener                                                    */
-/*                                                                            */
-/******************************************************************************/
+// RegisterEventListener ...
 func (client *Client) RegisterEventListener(scName string, eventFilter string) (*ListenerController, <-chan *EventWrapper, error) {
 	// Check regular expression is valid
 	_, err := regexp.Compile(eventFilter)
@@ -96,11 +92,6 @@ func (client *Client) RegisterEventListener(scName string, eventFilter string) (
 	return &ListenerController{eventChannel: eventChannel, streamAlive: &streamAlive, conn: client.conn}, eventChannel, nil
 }
 
-/******************************************************************************/
-/*                                                                            */
-/* Listen Events                                                              */
-/*                                                                            */
-/******************************************************************************/
 func (client *Client) listenEvents(stream pb.RequestHandler_RegisterEventListenerClient, eventChannel chan *EventWrapper, streamAlive *bool) {
 	for {
 		resp, err := stream.Recv()
@@ -153,11 +144,6 @@ func (client *Client) listenEvents(stream pb.RequestHandler_RegisterEventListene
 	closeEventListener(eventChannel, streamAlive)
 }
 
-/******************************************************************************/
-/*                                                                            */
-/* Close Event Listener                                                       */
-/*                                                                            */
-/******************************************************************************/
 func closeEventListener(eventChannel chan *EventWrapper, streamAlive *bool) {
 	close(eventChannel)
 	*streamAlive = false

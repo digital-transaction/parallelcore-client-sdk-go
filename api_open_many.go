@@ -13,7 +13,14 @@ import (
 
 // certPath: check OpenAny usage
 
-func OpenMany(endpointSpecs string, clientId string, credential string, certPath string) ([]*Client, error) {
+// OpenMany is similar to OpenAny, taking in the same parameters, but tries connect to all endpoints instead
+// of one. Accordingly, it returns a list of Clients instead of just one. If one connection attempt fails,
+// OpenMany skips the endpoint.
+//
+// If all connection attempts fail, it will return (nil, error). Otherwise, error is the last error
+// encountered during connection attempts. Applications should check whether or not []*Client is nil
+// to determine if OpenMany succeeded to establish some connections. Do not use error for this purpose.
+func OpenMany(endpointSpecs string, clientID string, credential string, certPath string) ([]*Client, error) {
 	endpoints := strings.Split(endpointSpecs, " ")
 	lastError := fmt.Errorf("")
 	clients := make([]*Client, 0)
@@ -30,7 +37,7 @@ func OpenMany(endpointSpecs string, clientId string, credential string, certPath
 		}
 		if token == "" {
 			// Successfully setup the first connection, fetch the token
-			returnBytes, err := client.auth([]byte(clientId), []byte(credential))
+			returnBytes, err := client.auth([]byte(clientID), []byte(credential))
 			client.Close()
 			if err != nil {
 				return nil, fmt.Errorf("CLIENT: OpenMany(%q): Failed to auth. %w", endpointSpecs, err)
@@ -62,10 +69,13 @@ func OpenMany(endpointSpecs string, clientId string, credential string, certPath
 	return clients, lastError
 }
 
-func OpenManyWithCert(endpointSpecs string, clientId string, credential string) ([]*Client, error) {
-	return OpenMany(endpointSpecs, clientId, credential, os.Getenv("PCORE_CERT_PATH"))
+// OpenManyWithCert is a wrapper around OpenMany. It calls OpenMany with os.Getenv("PCORE_CERT_PATH")
+// as the certPath parameter.
+func OpenManyWithCert(endpointSpecs string, clientID string, credential string) ([]*Client, error) {
+	return OpenMany(endpointSpecs, clientID, credential, os.Getenv("PCORE_CERT_PATH"))
 }
 
+// CloseMany is like Close, but closes every Client in clients.
 func CloseMany(clients []*Client) {
 	for _, each := range clients {
 		each.Close()
